@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Truck, PackageCheck, ChevronRight } from 'lucide-react';
 import api from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { num, money, fmtDateTime } from '@/lib/format';
 
 const FLOW = ['PENDING', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED'];
 
 export default function LogisticsDashboard() {
-  const [data, setData] = useState(null);
+  const { user } = useAuth();
+  const [shipments, setShipments] = useState(null);
   const [busy, setBusy] = useState(null);
   const [flash, setFlash] = useState('');
 
-  const load = () => api.get('/dashboard').then((r) => setData(r.data));
+  const load = () => api.get('/logistics/queue').then((r) => setShipments(r.data.shipments || []));
   useEffect(() => { load(); }, []);
 
-  if (!data) return <div className="loading">Loading logistics queue…</div>;
+  if (!shipments) return <div className="loading">Loading logistics queue…</div>;
+
+  const stats = {
+    pending: shipments.filter((s) => s.status === 'PENDING').length,
+    inTransit: shipments.filter((s) => s.status === 'IN_TRANSIT' || s.status === 'PICKED_UP').length,
+    assigned: shipments.filter((s) => s.status === 'ASSIGNED').length,
+    totalKmToday: shipments.reduce((s, sh) => s + Number(sh.distanceKm), 0),
+  };
+  const displayName = user?.name || 'Logistics';
 
   const setStatus = async (id, status) => {
     setBusy(id + ':' + status);
@@ -27,16 +37,16 @@ export default function LogisticsDashboard() {
   return (
     <div data-testid="logistics-dashboard">
       <section className="role-hero">
-        <p className="eyebrow">LOGISTICS · {data.provider.name}</p>
+        <p className="eyebrow">LOGISTICS · {displayName}</p>
         <h1>Every route, on schedule.</h1>
         <p>Pick up shipments assigned to you and progress them through delivery.</p>
       </section>
 
       <div className="stat-grid">
-        <div className="stat" data-testid="stat-pending"><div className="stat-icon orange"><Truck size={18} /></div><div><span>Pending pickup</span><strong>{data.stats.pending}</strong><small>Assign yourself</small></div></div>
-        <div className="stat" data-testid="stat-assigned"><div className="stat-icon green"><PackageCheck size={18} /></div><div><span>Assigned</span><strong>{data.stats.assigned}</strong><small>Ready</small></div></div>
-        <div className="stat" data-testid="stat-in-transit"><div className="stat-icon blue"><Truck size={18} /></div><div><span>In transit</span><strong>{data.stats.inTransit}</strong><small>On route</small></div></div>
-        <div className="stat" data-testid="stat-km"><div className="stat-icon green"><ChevronRight size={18} /></div><div><span>Total km</span><strong>{Math.round(data.stats.totalKmToday)}</strong><small>Across queue</small></div></div>
+        <div className="stat" data-testid="stat-pending"><div className="stat-icon orange"><Truck size={18} /></div><div><span>Pending pickup</span><strong>{stats.pending}</strong><small>Assign yourself</small></div></div>
+        <div className="stat" data-testid="stat-assigned"><div className="stat-icon green"><PackageCheck size={18} /></div><div><span>Assigned</span><strong>{stats.assigned}</strong><small>Ready</small></div></div>
+        <div className="stat" data-testid="stat-in-transit"><div className="stat-icon blue"><Truck size={18} /></div><div><span>In transit</span><strong>{stats.inTransit}</strong><small>On route</small></div></div>
+        <div className="stat" data-testid="stat-km"><div className="stat-icon green"><ChevronRight size={18} /></div><div><span>Total km</span><strong>{Math.round(stats.totalKmToday)}</strong><small>Across queue</small></div></div>
       </div>
 
       {flash && <div className="flash" data-testid="logistics-flash">{flash}</div>}
@@ -44,7 +54,7 @@ export default function LogisticsDashboard() {
       <section className="section-head" style={{ marginTop: 30 }}><div><p className="eyebrow">SHIPMENT QUEUE</p><h2>Live shipments</h2></div></section>
 
       <div className="offers-grid">
-        {data.shipments.map((s) => {
+        {shipments.map((s) => {
           const stepIdx = FLOW.indexOf(s.status);
           const nextStatus = FLOW[Math.min(stepIdx + 1, FLOW.length - 1)];
           return (
@@ -71,7 +81,7 @@ export default function LogisticsDashboard() {
             </div>
           );
         })}
-        {data.shipments.length === 0 && <div className="empty-inline" data-testid="logistics-empty">No live shipments. When a farmer accepts an offer, a shipment appears here.</div>}
+        {shipments.length === 0 && <div className="empty-inline" data-testid="logistics-empty">No live shipments. When a farmer accepts an offer, a shipment appears here.</div>}
       </div>
     </div>
   );
