@@ -1,66 +1,69 @@
-# AgriSutra MVP Product Record
+# KrishiSetu — Product Record
 
 ## Original problem statement
-Build an agricultural marketplace platform for farmers, buyers, FPOs/cooperatives, and admins. The complete vision includes farmer and buyer profiles, crop lots, quality verification, market and buyer discovery, net-realisation calculations, sell-now versus store analysis, offers, logistics, storage, payments, audit/provenance, alerts, WhatsApp, regional language and voice interaction, analytics, and AI decision support. The MVP vertical slice is: collect crop details, calculate controlled market and buyer options, subtract all relevant costs, compare sell now versus store, show transparent top recommendations, let the farmer choose, create an offer, and simulate the connected transaction timeline. The farmer remains the final decision-maker and AI explains backend-calculated numbers rather than inventing them.
+Build an agricultural marketplace platform for farmers, buyers, FPOs/cooperatives, admins, quality assessors and logistics providers with: farmer/buyer profiles, crop lots, quality verification, market/buyer discovery, deterministic **net-realisation** calculations, sell-now-vs-store analysis, offers, logistics, storage, payments, blockchain audit trail, alerts, WhatsApp, regional-language voice, analytics, and AI decision support. The MVP vertical slice is the guided farmer journey: crop entry → AI collection → market & buyer analysis → net-realisation → sell/store comparison → top 3 recommendations → farmer selects → offer → transaction. The farmer remains the final decision-maker; AI only explains backend-calculated numbers.
+
+## Stack (locked with user this iteration)
+- **Backend**: Node.js + Express + Prisma + PostgreSQL 15 (local, on :5432)
+- **Deployment**: FastAPI `server.py` retained on :8001 as async reverse proxy → spawns Node backend on :8002, so `/api/*` ingress + `REACT_APP_BACKEND_URL` remain intact (supervisor conf is read-only)
+- **Auth**: JWT (access 15m + refresh 7d), bcryptjs hashing, cookies + Authorization Bearer both accepted
+- **Financial math**: `decimal.js` end-to-end; `Decimal` fields in Prisma; no floats
+- **AI**: GPT-5.4 via Emergent LLM key, strictly grounded in backend calculation context; deterministic fallback if LLM unreachable
+- **Frontend**: React 19 + react-router-dom v7 + axios + framer-motion, warm earthy palette (forest #1E5128, sage, terracotta)
 
 ## Personas
-- **Farmer:** Rajesh Patil; wants a simple, trustworthy answer about where and when to sell.
-- **Buyer:** procurement user comparing verified lots and offers.
-- **FPO / Cooperative:** aggregates farmers and manages collective lots.
-- **Admin / Verifier:** monitors verification, transactions, disputes, and audit completeness.
+- **Farmer** (Rajesh Patil, Priya Kadam): wants the fair price after every cost, in a language they trust.
+- **Buyer** (FreshCart, Harbor, GreenBasket): posts demand once and gets matched to verified lots.
+- **FPO / Cooperative** (Nashik collective): aggregates farmers, compares buyer offers collectively.
+- **Admin**: verifies users, monitors transactions, reviews the audit trail.
+- **Quality assessor / Logistics provider**: roles reserved in schema; UIs deferred to P2.
 
-## Architecture decisions
-- React 19 dashboard with role selector for Farmer, Buyer, FPO, and Admin workspaces.
-- FastAPI backend under `/api`, using the existing MongoDB environment and response-safe Pydantic models.
-- Controlled demo datasets for markets, buyer demand, transport, storage, commission, packaging, and spoilage; endpoints are integration-ready.
-- Deterministic net-realisation engine: revenue minus transport, storage, commission, packaging, expected loss, and other relevant costs.
-- GPT-5.4 assistant through the server-side universal LLM key; assistant receives calculated context and explains it. Browser Web Speech API provides Hindi/English voice input where supported.
-- Simulated offer creation is connected to the backend endpoint. Shipment, payment, blockchain, WhatsApp, and external government data remain demo states.
-- Warm earthy interface: Outfit headings, DM Sans body, forest green, sage, terracotta, responsive sidebar and cardless content bands.
+## Architecture (this iteration)
+- Prisma schema at `/app/node_backend/prisma/schema.prisma` — User + Farmer/Farm/FPO/Buyer/BuyerDemand/Market/MarketPrice/Lot/Recommendation/BuyerMatch/Offer/Transaction/Shipment/Payment/BlockchainEvent/Conversation/Message/Notification/AuditLog.
+- Enums for Role, LotStatus, OfferStatus, TransactionStatus, ShipmentStatus, PaymentStatus, RecommendationType.
+- Deterministic services: `services/netRealisation.js` (Decimal math + haversine), `services/recommendations.js` (buyer + market options, top-3 + store option, persistence), `services/aiChat.js` (LLM + deterministic fallback).
+- API surface:
+  - Legacy compat (anonymous, backwards-compatible with old FastAPI shapes): `GET /api/dashboard`, `POST /api/analyze`, `POST /api/offers`, `GET /api/role/:role`, `POST /api/assistant/chat` (SSE), `/api/status`.
+  - New authed v1: `/api/v1/auth/{register,login,logout,me,refresh}`, `/api/v1/farmers/me`, `/api/v1/lots`, `/api/v1/markets`, `/api/v1/buyers/demand`, `/api/v1/recommendations/lot/:id`, `/api/v1/offers` (incl. `/:id/accept`, `/:id/reject`), `/api/v1/transactions` (incl. `/:id/shipment/advance`, `/:id/payment/settle`), `/api/v1/dashboard`, `/api/v1/ai/chat`.
+- Frontend routes: `/`, `/login`, `/register`, `/app` (role-based dashboard), `/app/sell`, `/app/lots`, `/app/lots/:id`, `/app/transactions`, `/app/demands`, `/app/matches`, `/app/offers`, `/app/farmers`, `/app/users`.
 
-## Core requirements (static)
-1. Farmer can enter crop, quantity, location, quality, and timeline.
-2. The system ranks market options using expected net realisation, not headline price.
-3. Every recommendation shows a transparent cost breakdown.
-4. Sell-now and store-and-sell are compared with storage and expected spoilage included.
-5. Farmer explicitly selects an option before an offer is created.
-6. Buyer, FPO, and Admin role views are available from the first screen.
-7. English/Hindi switching and text/voice assistant controls are visible.
-8. AI never autonomously sells produce.
-
-## Implemented — 2026-09-18
-- Built role-based AgriSutra dashboard with Farmer, Buyer, FPO, and Admin views.
-- Built guided farmer selling journey with controlled analysis endpoint and responsive comparison results.
-- Added transparent market, buyer, transport, commission, packaging, storage, and loss calculations.
-- Added sell-now versus store comparison and top recommendation confidence indicator.
-- Added GPT-5.4 streaming Sathi chat endpoint with backend context and graceful fallback.
-- Added Hindi UI toggle, Hindi voice locale, browser voice input control, and voice-ready visual state.
-- Added offer modal, backend offer creation, and simulated next-step confirmation.
-- Added visual alerts, lot journey timeline, verification/trust cues, and mobile responsive layout.
-- Verified frontend production build, backend compilation, dashboard/analyze/offer APIs, and automated end-to-end flows.
+## Implemented — 2026-02
+- **Full backend migration** from FastAPI/Mongo demo to Node/Express/Prisma/PostgreSQL with real persistence.
+- **JWT auth + RBAC** with seeded demo users per role (see `/app/memory/test_credentials.md`).
+- **Farmer flow (P0)**: create lot → auto-compute top 3 recommendations + store-vs-sell → view breakdown → create offer → accept → transaction lifecycle → mock shipment advance → mock payment settle → audit events.
+- **Deterministic net-realisation engine** (Decimal): revenue − transport − commission − packaging − spoilage − storage − other, with quality multipliers and confidence scoring.
+- **Buyer flow (P0)**: register/login, post demand, see matches, offers list.
+- **FPO overview (P0)**: farmers list, aggregated lots.
+- **Admin overview (P0)**: totals + recent transactions.
+- **AI Sathi (P0)**: `/api/v1/ai/chat` + legacy SSE, uses backend analysis as strict context, never invents numbers.
+- **Landing (P0)**: marketing hero pulls live legacy `/api/dashboard` so demo values displayed on the landing card are actually computed.
+- **Server-side ownership enforcement** for lot detail, recommendations recompute, direct recommendations endpoint, and AI chat with `lotId`.
+- **Legacy compatibility layer** so anonymous demo endpoints continue to work identically (old shapes preserved).
 
 ## Prioritized backlog
-### P0 — next for a production pilot
-- Persist farmers, buyers, lots, offers, and transactions in MongoDB instead of controlled response fixtures.
-- Add real authentication and permissions for the four roles.
-- Connect verified market and demand feeds after credentials and data contracts are confirmed.
-- Replace simulated shipment and payment milestones with provider-backed workflows.
+### P1 — trust & adoption
+- Multi-lot offer negotiation UI (counter-offer flow), quality attestation upload + lot passport, dispute workflow.
+- Real logistics/route provider (Google Maps distance/travel time).
+- Storage facility inventory + per-crop spoilage calibration.
+- Real Razorpay test integration behind the payment provider abstraction.
+- FPO buyer-offer comparison across member lots; farmer onboarding flow.
+- WhatsApp Cloud API delivery + notification preferences.
 
-### P1 — trust and adoption
-- Add quality inspection upload, attestation records, lot passport, and dispute workflow.
-- Add logistics route provider and real transport quotes.
-- Add storage facility inventory and spoilage calibration by crop and location.
-- Add actual WhatsApp Cloud API delivery and notification preferences.
-- Add FPO aggregation, farmer onboarding, and buyer offer comparison screens.
+### P2 — intelligence & scale
+- Predicted-vs-actual outcome tracking.
+- Historical price charts + forecast ranges + confidence calibration.
+- Bhashini ASR/TTS/translation/OCR.
+- Real EVM testnet recording behind blockchain provider abstraction (ethers) — only when RPC/key are configured.
+- Admin analytics, anomaly review, rating and dispute resolution reporting.
 
-### P2 — intelligence and scale
-- Add outcome tracking with predicted-versus-actual realisation.
-- Add historical price charts, forecasting ranges, and confidence calibration.
-- Add regional language translation, speech-to-text, text-to-speech, and OCR provider integrations.
-- Add EVM testnet audit recording after the transaction data model is persisted.
-- Add admin analytics, anomaly review, ratings, and dispute resolution reporting.
+### P3 — polish
+- Live e-NAM/Agmarknet integration once credentials/data contract confirmed.
+- Voice-first Sathi drawer with realtime dictation + TTS in Hindi.
+- Multi-tenant FPO admin.
 
 ## Next tasks
-1. Introduce persisted domain models and role-aware auth.
-2. Add real market/demand integration behind the existing analysis contract.
-3. Complete shipment/payment state transitions and transaction history.
+1. Wire Google Maps for real distance/travel time (behind service adapter).
+2. Replace mock payment with Razorpay test provider.
+3. Ship live blockchain provider (ethers) with clear on/off switch.
+4. Add quality attestation upload + lot passport view.
+5. FPO offer-comparison workspace.

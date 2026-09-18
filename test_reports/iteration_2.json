@@ -1,0 +1,49 @@
+{
+  "summary": "Ran full backend regression (17 tests) against Node/Express/Prisma via FastAPI proxy plus a frontend smoke pass. Backend: 16/17 pass. Frontend: landing, farmer login (quick-login), dashboard, selling journey (3 option cards + store panel with sell-vs-store comparison), lots list, and transactions (COMPLETED with mock chain audit + MOCK-PAY-* reference) all render correctly. One real security bug found in GET /api/v1/lots/:id: ownership check is gated only for FARMER role, so BUYER/FPO tokens can read any farmer's lot detail (returns 200 instead of 403).",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/v1/lots/:id",
+        "issue": "RBAC/ownership check only applies to FARMER role (see routes/lots.js line 101: `if (req.user.role === 'FARMER' && lot.farmerId !== req.user.farmer.id) return 403`). A logged-in BUYER can fetch any farmer's private lot detail and receives 200 with the full lot payload. Should be 403 for non-owner non-admin roles.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "GET /api/v1/markets, /api/v1/markets/prices",
+        "issue": "Requires Bearer auth. Spec in review request implies public read; consider making price endpoints public or documenting the auth requirement."
+      },
+      {
+        "endpoint": "POST /api/v1/lots and /api/v1/buyers/demand",
+        "issue": "Field names use `quantityQuintals` / `pickupLocation` / `minQuality` / `pricePerQuintal`. The problem-statement examples used `quantity` / `location` / `quality` / `targetPrice`. Not a bug, but inconsistent with legacy /api/analyze contract; consider accepting both or documenting."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_krishisetu_api.py",
+    "/app/test_reports/pytest/krishisetu_results.xml"
+  ],
+  "action_items": [
+    "Fix ownership check in GET /api/v1/lots/:id so BUYER/FPO cannot read arbitrary farmer lots. Suggested: if role === 'BUYER' or 'FPO' and lot.farmerId !== self AND no matching demand/relationship, return 403 (or restrict to ADMIN + owning farmer)."
+  ],
+  "critical_code_review_comments": [
+    "routes/lots.js:101 — ownership guard uses `req.user.role === 'FARMER' &&` short-circuit, silently allowing every other authenticated role to read any lot. Same pattern is repeated at line 120 for /recommendations recompute, so BUYER/FPO can also trigger recompute of another farmer's lot.",
+    "routes/markets.js — all endpoints wrapped in requireAuth. Landing/legacy dashboard already exposes market data anonymously; either make prices anonymous or drop requireAuth from GET /markets/prices to align with product spec.",
+    "Field naming across v1 (quantityQuintals, pickupLocation, minQuality, pricePerQuintal) diverges from legacy /api/analyze (quantity, location, quality). Confusing for clients; consider a shared DTO or alias layer."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_krishisetu_api.py (new)"
+  ],
+  "success_rate": { "backend": "94% (16/17)", "frontend": "100% smoke" },
+  "test_credentials": "Used seeded creds from /app/memory/test_credentials.md (rajesh/farmer123, freshcart/buyer123, admin/admin123).",
+  "seed_data_creation": "Test suite creates one TEST_<epoch>@example.com FARMER user (for register + duplicate 409 test) and one Tomato/40q lot for Rajesh (for create+recompute test). Also creates one buyer demand + one offer + one accepted transaction chain (advances shipment to DELIVERED and settles payment MOCK-PAY-*). No cleanup — data persists in Postgres.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "test_krishisetu_api.py covers legacy compat, auth, farmer dashboard/lots/recommendations, markets, buyer demand, RBAC, offer accept -> transaction -> shipment advance -> payment settle, and AI chat grounding. The single failing test (test_farmer_lot_detail_and_403) reflects a real security bug in routes/lots.js — do not weaken the assertion. Frontend automated flows via Playwright: landing/login/dashboard/sell/lots/transactions/chat triggers all render; deeper offer-accept/settle UI flow was not exercised end-to-end via Playwright (already verified via API + existing DB state showing COMPLETED transactions on the transactions page).",
+  "rca of the issue": "GET /api/v1/lots/:id in /app/node_backend/src/routes/lots.js (line 101): the guard is `if (req.user.role === 'FARMER' && lot.farmerId !== req.user.farmer.id) return 403`. Because the outer AND requires role === 'FARMER', a BUYER (or FPO) token skips the guard entirely and gets 200 with the full lot. Reproduction: (1) login buyer freshcart@krishisetu.dev, (2) fetch farmer lot list via any farmer token or seeded lot id LOT-2409-0001, (3) GET /api/v1/lots/<id> with buyer Bearer -> 200 (should be 403). Mitigation: replace with `if (lot.farmerId !== req.user.farmer?.id && req.user.role !== 'ADMIN') return 403` (and mirror the same fix on line 120 for POST /:id/recommendations)."
+}

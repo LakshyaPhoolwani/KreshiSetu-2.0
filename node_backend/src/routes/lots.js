@@ -97,8 +97,18 @@ router.get('/:id', requireAuth, async (req, res) => {
     },
   });
   if (!lot) return res.status(404).json({ error: 'Lot not found' });
-  // Access check
-  if (req.user.role === 'FARMER' && lot.farmerId !== req.user.farmer.id) return res.status(403).json({ error: 'Forbidden' });
+  // Access check: owning farmer, admin, buyer with an offer on this lot,
+  // or FPO that this farmer belongs to.
+  const role = req.user.role;
+  let allowed = role === 'ADMIN';
+  if (!allowed && role === 'FARMER') allowed = lot.farmerId === req.user.farmer?.id;
+  if (!allowed && role === 'BUYER' && req.user.buyer) {
+    allowed = lot.offers.some((o) => o.buyerId === req.user.buyer.id);
+  }
+  if (!allowed && role === 'FPO' && req.user.fpo) {
+    allowed = lot.farmer.fpoId === req.user.fpo.id;
+  }
+  if (!allowed) return res.status(403).json({ error: 'Forbidden' });
   res.json({ lot });
 });
 
@@ -113,11 +123,14 @@ router.patch('/:id', requireAuth, requireFarmer, async (req, res) => {
   res.json({ lot: updated });
 });
 
-// Recompute recommendations for a lot
+// Recompute recommendations for a lot — only owner or admin
 router.post('/:id/recommendations', requireAuth, async (req, res) => {
-  const lot = await prisma.lot.findUnique({ where: { id: req.params.id } });
+  const lot = await prisma.lot.findUnique({ where: { id: req.params.id }, include: { farmer: true } });
   if (!lot) return res.status(404).json({ error: 'Lot not found' });
-  if (req.user.role === 'FARMER' && lot.farmerId !== req.user.farmer.id) return res.status(403).json({ error: 'Forbidden' });
+  const role = req.user.role;
+  const isOwner = role === 'FARMER' && lot.farmerId === req.user.farmer?.id;
+  const isFpoOfLot = role === 'FPO' && req.user.fpo && lot.farmer.fpoId === req.user.fpo.id;
+  if (!isOwner && !isFpoOfLot && role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
   const result = await computeRecommendationsForLot(lot.id);
   await persistRecommendations(lot.id, result);
   res.json(serializeResult(result));

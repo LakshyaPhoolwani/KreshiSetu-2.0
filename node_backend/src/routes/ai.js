@@ -23,9 +23,12 @@ router.post('/chat', requireAuth, async (req, res) => {
   // If a lotId is given, fetch fresh backend calculation context
   let analysisContext = null;
   if (lotId) {
-    const lot = await prisma.lot.findUnique({ where: { id: lotId } });
+    const lot = await prisma.lot.findUnique({ where: { id: lotId }, include: { farmer: true } });
     if (lot) {
-      if (req.user.role === 'FARMER' && lot.farmerId !== req.user.farmer?.id) return res.status(403).json({ error: 'Forbidden' });
+      const role = req.user.role;
+      const isOwner = role === 'FARMER' && lot.farmerId === req.user.farmer?.id;
+      const isFpo = role === 'FPO' && req.user.fpo && lot.farmer.fpoId === req.user.fpo.id;
+      if (!isOwner && !isFpo && role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
       const result = await computeRecommendationsForLot(lot.id);
       analysisContext = serializeResult(result);
     }
@@ -66,9 +69,12 @@ router.post('/chat', requireAuth, async (req, res) => {
 
 // Tool: get recommendations for a lot (AI or FE can call it explicitly)
 router.get('/tools/recommendations/:lotId', requireAuth, async (req, res) => {
-  const lot = await prisma.lot.findUnique({ where: { id: req.params.lotId } });
+  const lot = await prisma.lot.findUnique({ where: { id: req.params.lotId }, include: { farmer: true } });
   if (!lot) return res.status(404).json({ error: 'Lot not found' });
-  if (req.user.role === 'FARMER' && lot.farmerId !== req.user.farmer?.id) return res.status(403).json({ error: 'Forbidden' });
+  const role = req.user.role;
+  const isOwner = role === 'FARMER' && lot.farmerId === req.user.farmer?.id;
+  const isFpo = role === 'FPO' && req.user.fpo && lot.farmer.fpoId === req.user.fpo.id;
+  if (!isOwner && !isFpo && role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
   const result = await computeRecommendationsForLot(lot.id);
   res.json(serializeResult(result));
 });
