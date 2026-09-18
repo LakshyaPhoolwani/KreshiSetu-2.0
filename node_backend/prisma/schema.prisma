@@ -1,0 +1,438 @@
+// KrishiSetu Prisma schema — PostgreSQL
+// Financial fields use Decimal for correctness.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  FARMER
+  FPO
+  BUYER
+  ADMIN
+  QUALITY_ASSESSOR
+  LOGISTICS_PROVIDER
+}
+
+enum LotStatus {
+  DRAFT
+  AVAILABLE
+  OFFERED
+  ACCEPTED
+  SHIPMENT_PENDING
+  IN_TRANSIT
+  DELIVERED
+  PAYMENT_PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum TransactionStatus {
+  CREATED
+  CONFIRMED
+  LOGISTICS_PENDING
+  IN_TRANSIT
+  DELIVERED
+  PAYMENT_PENDING
+  COMPLETED
+  DISPUTED
+  CANCELLED
+}
+
+enum ShipmentStatus {
+  PENDING
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum RecommendationType {
+  SELL_NOW
+  STORE_AND_SELL
+}
+
+// ---------- Auth / Identity ----------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role
+  language     String   @default("en")
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  farmer          Farmer?
+  buyer           Buyer?
+  fpo             FPO?
+  createdOffers   Offer[]         @relation("OfferCreatedBy")
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  conversations   Conversation[]
+
+  @@index([role])
+}
+
+// ---------- Domain entities ----------
+
+model Farmer {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  village    String?
+  district   String?
+  state      String?
+  pincode    String?
+  latitude   Decimal? @db.Decimal(10, 6)
+  longitude  Decimal? @db.Decimal(10, 6)
+  aadhaarRef String?
+  fpoId      String?
+  fpo        FPO?     @relation(fields: [fpoId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  farms  Farm[]
+  lots   Lot[]
+
+  @@index([fpoId])
+}
+
+model Farm {
+  id         String   @id @default(cuid())
+  farmerId   String
+  farmer     Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  name       String
+  areaAcres  Decimal  @db.Decimal(10, 2)
+  soilType   String?
+  latitude   Decimal? @db.Decimal(10, 6)
+  longitude  Decimal? @db.Decimal(10, 6)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lots Lot[]
+
+  @@index([farmerId])
+}
+
+model FPO {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  registrationId String?
+  district   String?
+  state      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  farmers Farmer[]
+}
+
+model Buyer {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName  String
+  gstin        String?
+  kycStatus    String   @default("pending")
+  city         String?
+  state        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  demands BuyerDemand[]
+  offers  Offer[]
+
+  @@index([kycStatus])
+}
+
+model BuyerDemand {
+  id                 String   @id @default(cuid())
+  buyerId            String
+  buyer              Buyer    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  crop               String
+  quantityQuintals   Decimal  @db.Decimal(12, 2)
+  minQuality         String
+  location           String
+  latitude           Decimal? @db.Decimal(10, 6)
+  longitude          Decimal? @db.Decimal(10, 6)
+  requiredBy         DateTime
+  pricePerQuintal    Decimal  @db.Decimal(12, 2)
+  active             Boolean  @default(true)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  matches BuyerMatch[]
+
+  @@index([crop, active])
+  @@index([buyerId])
+}
+
+model Market {
+  id          String   @id @default(cuid())
+  name        String
+  location    String
+  district    String?
+  state       String?
+  latitude    Decimal? @db.Decimal(10, 6)
+  longitude   Decimal? @db.Decimal(10, 6)
+  isDemo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prices MarketPrice[]
+
+  @@unique([name, location])
+}
+
+model MarketPrice {
+  id               String   @id @default(cuid())
+  marketId         String
+  market           Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  crop             String
+  variety          String?
+  grade            String
+  pricePerQuintal  Decimal  @db.Decimal(12, 2)
+  currency         String   @default("INR")
+  source           String   @default("demo")
+  recordedAt       DateTime @default(now())
+
+  @@index([marketId, crop, grade])
+  @@index([crop, recordedAt])
+}
+
+model Lot {
+  id                 String    @id @default(cuid())
+  code               String    @unique
+  farmerId           String
+  farmer             Farmer    @relation(fields: [farmerId], references: [id])
+  farmId             String?
+  farm               Farm?     @relation(fields: [farmId], references: [id])
+  crop               String
+  variety            String?
+  quantityQuintals   Decimal   @db.Decimal(12, 2)
+  quality            String
+  qualityConfidence  Decimal   @db.Decimal(5, 2)  @default(0)
+  harvestDate        DateTime?
+  pickupLocation     String
+  pickupLatitude     Decimal?  @db.Decimal(10, 6)
+  pickupLongitude    Decimal?  @db.Decimal(10, 6)
+  timeline           String
+  askPricePerQuintal Decimal?  @db.Decimal(12, 2)
+  status             LotStatus @default(DRAFT)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  recommendations Recommendation[]
+  offers          Offer[]
+  transactions    Transaction[]
+  matches         BuyerMatch[]
+
+  @@index([farmerId])
+  @@index([crop, status])
+}
+
+model Recommendation {
+  id                    String              @id @default(cuid())
+  lotId                 String
+  lot                   Lot                 @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  rank                  Int
+  type                  RecommendationType
+  marketId              String?
+  buyerId               String?
+  distanceKm            Decimal             @db.Decimal(10, 2)
+  travelTime            String?
+  grossRevenue          Decimal             @db.Decimal(14, 2)
+  transportCost         Decimal             @db.Decimal(14, 2)
+  storageCost           Decimal             @db.Decimal(14, 2)
+  commissionCost        Decimal             @db.Decimal(14, 2)
+  packagingCost         Decimal             @db.Decimal(14, 2)
+  spoilageCost          Decimal             @db.Decimal(14, 2)
+  otherCost             Decimal             @db.Decimal(14, 2) @default(0)
+  netRealisation        Decimal             @db.Decimal(14, 2)
+  effectivePricePerQuintal Decimal          @db.Decimal(12, 2)
+  confidence            Decimal             @db.Decimal(5, 2)
+  reason                String
+  createdAt             DateTime            @default(now())
+
+  @@index([lotId, rank])
+}
+
+model BuyerMatch {
+  id             String       @id @default(cuid())
+  lotId          String
+  lot            Lot          @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  demandId       String
+  demand         BuyerDemand  @relation(fields: [demandId], references: [id], onDelete: Cascade)
+  matchScore     Decimal      @db.Decimal(5, 2)
+  reason         String
+  createdAt      DateTime     @default(now())
+
+  @@unique([lotId, demandId])
+  @@index([lotId])
+}
+
+model Offer {
+  id                  String       @id @default(cuid())
+  lotId               String
+  lot                 Lot          @relation(fields: [lotId], references: [id])
+  buyerId             String
+  buyer               Buyer        @relation(fields: [buyerId], references: [id])
+  createdById         String
+  createdBy           User         @relation("OfferCreatedBy", fields: [createdById], references: [id])
+  pricePerQuintal     Decimal      @db.Decimal(12, 2)
+  quantityQuintals    Decimal      @db.Decimal(12, 2)
+  pickupBy            DateTime?
+  paymentTerms        String       @default("net_7")
+  status              OfferStatus  @default(PENDING)
+  message             String?
+  expectedNetRealisation Decimal?  @db.Decimal(14, 2)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  transaction Transaction?
+
+  @@index([lotId])
+  @@index([buyerId])
+  @@index([status])
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  code          String            @unique
+  lotId         String
+  lot           Lot               @relation(fields: [lotId], references: [id])
+  offerId       String            @unique
+  offer         Offer             @relation(fields: [offerId], references: [id])
+  amount        Decimal           @db.Decimal(14, 2)
+  status        TransactionStatus @default(CREATED)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  shipment      Shipment?
+  payment       Payment?
+  blockchainEvents BlockchainEvent[]
+
+  @@index([status])
+}
+
+model Shipment {
+  id             String         @id @default(cuid())
+  transactionId  String         @unique
+  transaction    Transaction    @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  pickupLocation String
+  destination    String
+  distanceKm     Decimal        @db.Decimal(10, 2)
+  transporter    String?
+  cost           Decimal        @db.Decimal(14, 2)
+  status         ShipmentStatus @default(PENDING)
+  pickedUpAt     DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  transactionId String        @unique
+  transaction   Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  amount        Decimal       @db.Decimal(14, 2)
+  provider      String        @default("mock")
+  reference     String?
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model BlockchainEvent {
+  id            String   @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  eventType     String
+  payload       Json
+  txHash        String?
+  provider      String   @default("mock")
+  isDemo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([transactionId])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @default("Conversation with Sathi")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String   // "user" | "assistant" | "system" | "tool"
+  content        String
+  toolCalls      Json?
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
