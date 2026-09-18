@@ -1,0 +1,68 @@
+{
+  "app_name": "AgriSutra - Autonomous Farmer & FPO Marketplace Engine",
+  "app_type": "hybrid_fullstack dashboard",
+  "theme": "light_warm_earthy",
+  "emotional_tone": "Empowering, transparent, deeply grounded, trustworthy, modern rural-tech",
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Inter",
+    "mono_font": "JetBrains Mono"
+  },
+  "colors": {
+    "primary": "#1E5128",
+    "primary_foreground": "#FFFFFF",
+    "secondary": "#D8A47F",
+    "accent": "#4E9F3D",
+    "background": "#F4F6F0",
+    "surface": "#FFFFFF",
+    "card": "#FFFFFF",
+    "text_main": "#191A19",
+    "text_muted": "#525B52",
+    "border": "#D2D9CE",
+    "success": "#2E7D32",
+    "warning": "#ED6C02",
+    "error": "#D32F2F"
+  },
+  "visual_enhancers": {
+    "border_radius": "12px",
+    "shadows": [
+      "0 4px 20px -2px rgba(30, 81, 40, 0.08)",
+      "0 10px 30px -4px rgba(30, 81, 40, 0.12)"
+    ],
+    "glassmorphism": {
+      "background": "rgba(255, 255, 255, 0.85)",
+      "backdrop_blur": "16px",
+      "border": "1px solid rgba(30, 81, 40, 0.15)"
+    }
+  },
+  "grids": {
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-6",
+    "bento_grid": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-12 gap-8"
+  },
+  "layouts": {
+    "sidebar": "fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 z-40",
+    "main_content": "ml-64 min-h-screen bg-[#F4F6F0] p-6 lg:p-10"
+  },
+  "motion": {
+    "hover": "transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg",
+    "tap": "active:scale-95"
+  },
+  "accessibility": {
+    "min_contrast": "4.5:1",
+    "focus_ring": "focus:ring-2 focus:ring-[#1E5128] focus:outline-none"
+  },
+  "media": {
+    "farmer_hero": "https://images.unsplash.com/photo-1738992765917-15d0b7d36683?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "silo_storage": "https://images.unsplash.com/photo-1667487648590-4bab281f0300?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "harvest_field": "https://images.pexels.com/photos/20445169/pexels-photo-20445169.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+  },
+  "instructions_to_main_agent": [
+    "Build a fully interactive hybrid full-stack Agri Marketplace dashboard in React JS (.js files) with Tailwind CSS, supporting Farmer, Buyer, FPO, and Admin roles.",
+    "Implement the exact guided farmer selling workflow: Crop Entry -> AI Agent Collection -> Market & Buyer Demand -> Net Realisation calculation -> Sell Now vs Store comparison -> Top 3 options -> Offer Generation -> Transaction Execution -> EVM Testnet Recording.",
+    "Ensure all calculations (transportation, commission, net realization) are performed deterministically in backend/frontend logic, with the AI Agent explaining the numbers rather than inventing them.",
+    "Support English and Hindi language switching with interactive voice input/output simulation and text AI Assistant chat.",
+    "Include Digital Lot Management, Quality Assessment grading, Logistics calculator, FPO aggregation, Blockchain verification explorer on EVM testnet, Dispute management, and WhatsApp notification logs.",
+    "Ensure all interactive elements and buttons include `data-testid` attributes for automated testing.",
+    "Do NOT use pure #000000 or full transparent headers; maintain warm earthy tones (#1E5128 primary, #F4F6F0 background)."
+  ]
+}

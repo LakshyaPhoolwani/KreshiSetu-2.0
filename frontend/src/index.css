@@ -1,0 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root{--forest:#1e5128;--leaf:#4e9f3d;--ink:#191a19;--muted:#697267;--cream:#f4f6f0;--line:#d9dfd6;--terra:#c86b43;--warm:#fffdf8}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}button,input,select{font:inherit}button{cursor:pointer}h1,h2,h3,h4,p{margin:0}.App{min-height:100vh}
