@@ -1,6 +1,8 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Bot, ChevronRight, CircleHelp, Leaf, LayoutDashboard, LogOut, MapPin, PackageCheck, ScrollText, ShoppingBasket, ShieldCheck, Users, Scale } from 'lucide-react';
+import { Bell, Bot, ChevronRight, CircleHelp, ClipboardCheck, Leaf, LayoutDashboard, LogOut, MapPin, PackageCheck, Phone, ScrollText, ShoppingBasket, ShieldCheck, Truck, Users, Scale } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import Logo from '@/components/Logo';
+import MarketTicker from '@/components/MarketTicker';
 
 const ROLE_NAV = {
   FARMER: [
@@ -24,10 +26,20 @@ const ROLE_NAV = {
     { to: '/app', label: 'Admin overview', icon: LayoutDashboard, id: 'overview' },
     { to: '/app/users', label: 'Users', icon: Users, id: 'users' },
     { to: '/app/transactions', label: 'Transactions', icon: ScrollText, id: 'transactions' },
+    { to: '/app/quality', label: 'Quality audits', icon: ClipboardCheck, id: 'quality' },
+    { to: '/app/logistics', label: 'Logistics', icon: Truck, id: 'logistics' },
+  ],
+  QUALITY_ASSESSOR: [
+    { to: '/app', label: 'Attestation queue', icon: LayoutDashboard, id: 'overview' },
+    { to: '/app/quality', label: 'All lots', icon: ClipboardCheck, id: 'quality' },
+  ],
+  LOGISTICS_PROVIDER: [
+    { to: '/app', label: 'Shipment queue', icon: LayoutDashboard, id: 'overview' },
+    { to: '/app/logistics', label: 'All shipments', icon: Truck, id: 'logistics' },
   ],
 };
 
-export default function AppLayout({ children, onOpenChat }) {
+export default function AppLayout({ children, onOpenChat, onOpenCall }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,14 +48,13 @@ export default function AppLayout({ children, onOpenChat }) {
   return (
     <div className="app-shell" data-testid="app-shell">
       <aside className="sidebar" data-testid="main-sidebar">
-        <div className="brand">
-          <div className="brand-mark"><Leaf size={20} /></div>
-          <div><strong>KrishiSetu</strong><span>fairer selling, together</span></div>
+        <div className="brand" style={{ paddingBottom: 22 }}>
+          <Logo size={18} />
         </div>
         <div className="role-switch" data-testid="role-badge">
           <span>Signed in as</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--forest)', fontWeight: 700, fontSize: 13 }}>
-            <ShieldCheck size={14} /> {user?.role}
+            <ShieldCheck size={14} /> <span data-testid="role-badge-value">{user?.role}</span>
           </div>
         </div>
         <nav>
@@ -57,9 +68,9 @@ export default function AppLayout({ children, onOpenChat }) {
           })}
         </nav>
         <div className="sidebar-bottom">
-          <button className="help-box" onClick={onOpenChat} data-testid="open-sathi-sidebar" style={{ width: '100%', textAlign: 'left', border: 0, background: 'transparent' }}>
-            <CircleHelp size={18} />
-            <div><b>Need a hand?</b><span>Talk to Sathi AI</span></div>
+          <button className="help-box" onClick={onOpenCall} data-testid="open-voice-call-sidebar" style={{ width: '100%', textAlign: 'left', border: 0, background: 'transparent' }}>
+            <Phone size={18} />
+            <div><b>Call Sathi AI</b><span>Voice conversation</span></div>
           </button>
           <div className="profile" data-testid="profile-block">
             <div className="avatar">{user?.name?.split(' ').map((x) => x[0]).join('').slice(0, 2).toUpperCase() || 'U'}</div>
@@ -75,8 +86,11 @@ export default function AppLayout({ children, onOpenChat }) {
           <div className="mobile-brand"><Leaf size={18} /> KrishiSetu</div>
           <div className="crumb">Workspace <span>/</span> <b>Good morning, {user?.name?.split(' ')[0] || 'friend'}</b></div>
           <div className="top-actions">
+            <button className="icon-btn" onClick={onOpenCall} data-testid="open-voice-call-button">
+              <Phone size={19} /><span>Call Sathi</span>
+            </button>
             <button className="icon-btn" onClick={onOpenChat} data-testid="open-chat-button">
-              <Bot size={19} /><span>Ask Sathi</span>
+              <Bot size={19} /><span>Chat</span>
             </button>
             <button className="icon-btn" data-testid="notifications-button">
               <Bell size={19} /><i></i>
@@ -85,6 +99,7 @@ export default function AppLayout({ children, onOpenChat }) {
             <div className="top-avatar">{user?.name?.[0]?.toUpperCase() || 'U'}</div>
           </div>
         </header>
+        <MarketTicker />
         <div className="content">{children}</div>
       </main>
     </div>

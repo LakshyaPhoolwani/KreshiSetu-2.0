@@ -10,8 +10,52 @@ router.get('/', requireAuth, async (req, res) => {
   if (req.user.role === 'BUYER') return buyerDashboard(req, res);
   if (req.user.role === 'FPO') return fpoDashboard(req, res);
   if (req.user.role === 'ADMIN') return adminDashboard(req, res);
+  if (req.user.role === 'QUALITY_ASSESSOR') return qualityDashboard(req, res);
+  if (req.user.role === 'LOGISTICS_PROVIDER') return logisticsDashboard(req, res);
   res.json({ role: req.user.role });
 });
+
+async function qualityDashboard(req, res) {
+  const [queue, history] = await Promise.all([
+    prisma.lot.findMany({
+      where: { status: { in: ['DRAFT', 'AVAILABLE', 'OFFERED'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      include: { farmer: { include: { user: { select: { name: true } } } } },
+    }),
+    prisma.auditLog.findMany({ where: { action: 'quality.attest', userId: req.user.id }, orderBy: { createdAt: 'desc' }, take: 10 }),
+  ]);
+  res.json({
+    assessor: { name: req.user.name, verified: req.user.verified },
+    stats: {
+      awaitingAttestation: queue.filter((l) => Number(l.qualityConfidence) < 90).length,
+      totalInQueue: queue.length,
+      attestedByMe: history.length,
+    },
+    queue, history,
+  });
+}
+
+async function logisticsDashboard(req, res) {
+  const shipments = await prisma.shipment.findMany({
+    where: { status: { in: ['PENDING', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT'] } },
+    include: {
+      transaction: { include: { lot: true, offer: { include: { buyer: true } } } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 30,
+  });
+  res.json({
+    provider: { name: req.user.name, verified: req.user.verified },
+    stats: {
+      pending: shipments.filter((s) => s.status === 'PENDING').length,
+      inTransit: shipments.filter((s) => s.status === 'IN_TRANSIT' || s.status === 'PICKED_UP').length,
+      assigned: shipments.filter((s) => s.status === 'ASSIGNED').length,
+      totalKmToday: shipments.reduce((s, sh) => s + Number(sh.distanceKm), 0),
+    },
+    shipments,
+  });
+}
 
 async function farmerDashboard(req, res) {
   const farmerId = req.user.farmer.id;

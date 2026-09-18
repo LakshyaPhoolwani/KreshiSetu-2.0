@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Bot, Mic, Send, X } from 'lucide-react';
+import { Bot, Mic, Phone, Send, X } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 
-export default function SathiChat({ onClose, lotId }) {
+export default function SathiChat({ onClose, lotId, onStartCall }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState([
     { role: 'assistant', content: user ? `Namaste ${user.name.split(' ')[0]}! I'm Sathi. Ask me anything about your lot, prices, or costs.` : "Namaste! I'm Sathi. Sign in to see your live analysis." },
@@ -56,6 +56,7 @@ export default function SathiChat({ onClose, lotId }) {
         {sending && <div className="bubble bot" data-testid="chat-thinking">Thinking…</div>}
       </div>
       <div className="quick-prompts">
+        {onStartCall && <button onClick={() => { onStartCall(); onClose?.(); }} data-testid="switch-to-voice-button" style={{ background: 'var(--forest)', color: '#fff', borderColor: 'var(--forest)' }}><Phone size={11} style={{ marginRight: 4 }} /> Voice call</button>}
         <button onClick={() => send('Compare sell now vs store for me')} data-testid="quick-sell-store-button">Sell now vs store</button>
         <button onClick={() => send('Why is the top option recommended?')} data-testid="quick-why-button">Why this option?</button>
         <button onClick={() => send('Explain each cost in the breakdown')} data-testid="quick-explain-button">Explain costs</button>

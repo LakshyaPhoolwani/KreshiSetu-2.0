@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Leaf, ShieldCheck, ArrowRight } from 'lucide-react';
+import { ShieldCheck, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import Logo from '@/components/Logo';
 
 const DEMO_USERS = [
   { label: 'Farmer · Rajesh', email: 'rajesh@krishisetu.dev', password: 'farmer123', role: 'FARMER' },
   { label: 'Buyer · FreshCart', email: 'freshcart@krishisetu.dev', password: 'buyer123', role: 'BUYER' },
-  { label: 'Buyer · Harbor', email: 'harbor@krishisetu.dev', password: 'buyer123', role: 'BUYER' },
   { label: 'FPO · Nashik', email: 'fpo@krishisetu.dev', password: 'fpo123', role: 'FPO' },
+  { label: 'Quality assessor', email: 'quality@krishisetu.dev', password: 'quality123', role: 'QUALITY_ASSESSOR' },
+  { label: 'Logistics', email: 'logistics@krishisetu.dev', password: 'logistics123', role: 'LOGISTICS_PROVIDER' },
   { label: 'Admin', email: 'admin@krishisetu.dev', password: 'admin123', role: 'ADMIN' },
 ];
 
@@ -51,8 +53,7 @@ export default function Login() {
     <div className="auth-shell" data-testid="login-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <div className="brand-mark"><Leaf size={22} /></div>
-          <div><strong>KrishiSetu</strong><span>fairer selling, together</span></div>
+          <Logo size={18} />
         </div>
         <p className="eyebrow">SIGN IN</p>
         <h1>Welcome back.</h1>

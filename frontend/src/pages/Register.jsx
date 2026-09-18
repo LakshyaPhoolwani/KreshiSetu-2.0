@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Leaf, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import Logo from '@/components/Logo';
 
 const ROLES = [
   { v: 'FARMER', l: 'Farmer' },
@@ -9,6 +10,7 @@ const ROLES = [
   { v: 'FPO', l: 'FPO / Cooperative' },
   { v: 'QUALITY_ASSESSOR', l: 'Quality assessor' },
   { v: 'LOGISTICS_PROVIDER', l: 'Logistics provider' },
+  { v: 'ADMIN', l: 'Admin' },
 ];
 
 export default function Register() {
@@ -35,8 +37,7 @@ export default function Register() {
     <div className="auth-shell" data-testid="register-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <div className="brand-mark"><Leaf size={22} /></div>
-          <div><strong>KrishiSetu</strong><span>fairer selling, together</span></div>
+          <Logo size={18} />
         </div>
         <p className="eyebrow">CREATE ACCOUNT</p>
         <h1>Join the network.</h1>

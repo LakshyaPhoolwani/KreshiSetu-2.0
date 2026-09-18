@@ -12,6 +12,8 @@ const DEMO = {
     { email: 'harbor@krishisetu.dev', password: 'buyer123', name: 'Harbor Foods Co.', role: 'BUYER', verified: true, company: 'Harbor Foods Co.', city: 'Mumbai', state: 'Maharashtra' },
     { email: 'greenbasket@krishisetu.dev', password: 'buyer123', name: 'GreenBasket Retail', role: 'BUYER', verified: true, company: 'GreenBasket Retail', city: 'Pune', state: 'Maharashtra' },
     { email: 'fpo@krishisetu.dev', password: 'fpo123', name: 'Nashik Farmers Collective', role: 'FPO', verified: true },
+    { email: 'quality@krishisetu.dev', password: 'quality123', name: 'Anil Deshmukh', role: 'QUALITY_ASSESSOR', verified: true },
+    { email: 'logistics@krishisetu.dev', password: 'logistics123', name: 'GreenLine Logistics', role: 'LOGISTICS_PROVIDER', verified: true },
   ],
   markets: [
     { name: 'Lasalgaon Mandi', location: 'Lasalgaon, Nashik', district: 'Nashik', state: 'Maharashtra', prices: [{ crop: 'Onion', grade: 'Grade A', price: 2420 }, { crop: 'Tomato', grade: 'Grade A', price: 1800 }] },
@@ -27,15 +29,14 @@ const DEMO = {
 };
 
 async function seedIfNeeded() {
-  const existing = await prisma.user.count();
-  if (existing > 0) {
-    console.log('[seed] users already present; skipping seed');
-    return;
-  }
-  console.log('[seed] planting demo data …');
-
+  console.log('[seed] ensuring demo users …');
   const users = {};
   for (const u of DEMO.users) {
+    let existing = await prisma.user.findUnique({
+      where: { email: u.email.toLowerCase() },
+      include: { farmer: true, buyer: true, fpo: true },
+    });
+    if (existing) { users[u.email] = existing; continue; }
     const passwordHash = await bcrypt.hash(u.password, 10);
     const created = await prisma.user.create({
       data: {
@@ -52,6 +53,14 @@ async function seedIfNeeded() {
     });
     users[u.email] = created;
   }
+
+  // Everything below (markets, demands, lot) only runs on truly fresh DB
+  const marketCount = await prisma.market.count();
+  if (marketCount > 0) {
+    console.log('[seed] markets already present; skipping domain seed');
+    return;
+  }
+  console.log('[seed] planting domain data …');
 
   // Attach farmers to FPO
   const fpo = users['fpo@krishisetu.dev'].fpo;

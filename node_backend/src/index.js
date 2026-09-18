@@ -19,6 +19,8 @@ const transactionsRouter = require('./routes/transactions');
 const dashboardRouter = require('./routes/dashboard');
 const aiRouter = require('./routes/ai');
 const legacyRouter = require('./routes/legacy');
+const qualityRouter = require('./routes/quality');
+const logisticsRouter = require('./routes/logistics');
 
 const app = express();
 const PORT = process.env.PORT || 8002;
@@ -57,6 +59,8 @@ app.use('/api/v1/offers', offersRouter);
 app.use('/api/v1/transactions', transactionsRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/ai', aiRouter);
+app.use('/api/v1/quality', qualityRouter);
+app.use('/api/v1/logistics', logisticsRouter);
 // Convenience aliases so any client that expects /api/auth still works
 app.use('/api/auth', authRouter);
 

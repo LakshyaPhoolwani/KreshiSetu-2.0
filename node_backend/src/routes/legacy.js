@@ -213,6 +213,35 @@ router.post('/assistant/chat', async (req, res) => {
 router.get('/status', async (_req, res) => res.json([]));
 router.post('/status', async (req, res) => res.json({ id: 'legacy', client_name: req.body?.client_name || 'demo', timestamp: new Date().toISOString() }));
 
+// Public market-price ticker (anonymous) — used by landing + dashboards
+router.get('/market-ticker', async (req, res) => {
+  const { crop } = req.query;
+  const where = crop ? { crop: { equals: crop, mode: 'insensitive' } } : {};
+  const prices = await prisma.marketPrice.findMany({
+    where,
+    include: { market: { select: { name: true, location: true, district: true, state: true, isDemo: true } } },
+    orderBy: { recordedAt: 'desc' },
+    take: 30,
+  });
+  // Compact ticker payload
+  const items = prices.map((p) => ({
+    id: p.id,
+    crop: p.crop,
+    grade: p.grade,
+    market: p.market.name,
+    location: p.market.location,
+    pricePerQuintal: Number(p.pricePerQuintal),
+    source: p.source,
+    isDemo: p.market.isDemo || p.source === 'demo',
+    recordedAt: p.recordedAt,
+  }));
+  res.json({
+    items,
+    notice: 'Prices below are seeded demo data. Live e-NAM/Agmarknet integration is not enabled yet.',
+    demo: true,
+  });
+});
+
 // ----- helpers -----
 function emptyAnalysis() {
   return {

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Bot, ChevronRight, Leaf, MapPin, Scale, ShieldCheck, Sparkles, TrendingUp, Truck, Users, Wallet } from 'lucide-react';
+import { ArrowRight, Bot, ChevronRight, Leaf, MapPin, Phone, Scale, ShieldCheck, Sparkles, TrendingUp, Truck, Users, Wallet } from 'lucide-react';
 import { legacyApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { money } from '@/lib/format';
+import Logo from '@/components/Logo';
+import MarketTicker from '@/components/MarketTicker';
 
 export default function Landing() {
   const [demo, setDemo] = useState(null);
@@ -17,10 +19,7 @@ export default function Landing() {
   return (
     <div className="landing" data-testid="landing-page">
       <header className="landing-nav">
-        <div className="brand">
-          <div className="brand-mark"><Leaf size={20} /></div>
-          <div><strong>KrishiSetu</strong><span>fairer selling, together</span></div>
-        </div>
+        <Logo size={20} />
         <nav className="landing-nav-links">
           <a href="#how" data-testid="nav-how">How it works</a>
           <a href="#roles" data-testid="nav-roles">For everyone</a>
@@ -36,11 +35,13 @@ export default function Landing() {
         </nav>
       </header>
 
+      <MarketTicker />
+
       <section className="hero">
         <div>
-          <p className="eyebrow"><span className="pulse"></span> Autonomous decision engine · not a marketplace listing</p>
+          <p className="eyebrow" data-testid="hero-tagline"><span className="pulse"></span> The autonomous decision engine for Indian agriculture</p>
           <h1>The fair price,<br /><em>after every cost.</em></h1>
-          <p className="hero-sub">KrishiSetu tells a farmer what they will actually keep — after transport, commission, packaging, storage and expected spoilage — and matches them to the buyer that maximises net realisation, not headline price.</p>
+          <p className="hero-sub" data-testid="hero-subtagline">KrishiSetu is a voice-first market-linkage platform that shows every Indian farmer their real net realisation — after transport, commission, packaging, storage and spoilage — and matches them to the buyer that maximises what they actually keep.</p>
           <div className="hero-actions">
             <button className="primary" onClick={() => nav(user ? '/app' : '/login')} data-testid="hero-cta">
               {user ? 'Open my dashboard' : 'Try a live demo'} <ArrowRight size={16} />
@@ -49,8 +50,8 @@ export default function Landing() {
           </div>
           <div className="hero-facts">
             <div><Sparkles size={14} /> Transparent net realisation</div>
-            <div><ShieldCheck size={14} /> Every action on the audit trail</div>
-            <div><Bot size={14} /> AI that only explains real numbers</div>
+            <div><Phone size={14} /> Voice-first AI · Hindi & English</div>
+            <div><ShieldCheck size={14} /> Every action audited</div>
           </div>
         </div>
         <div className="hero-visual">
@@ -109,12 +110,14 @@ export default function Landing() {
         <h2 className="center">One platform · four roles.</h2>
         <div className="roles-grid">
           {[
-            { t: 'Farmer', d: 'Get the fair price after every cost. Voice, text, English or Hindi.', u: 'rajesh@krishisetu.dev / farmer123' },
+            { t: 'Farmer', d: 'Get the fair price after every cost. Voice call Sathi in Hindi or English.', u: 'rajesh@krishisetu.dev / farmer123' },
             { t: 'Buyer', d: 'Post demand once. Get matched to verified lots with quality and provenance.', u: 'freshcart@krishisetu.dev / buyer123' },
-            { t: 'FPO', d: 'Aggregate produce, compare buyer offers, track outcomes for every member farmer.', u: 'fpo@krishisetu.dev / fpo123' },
+            { t: 'FPO', d: 'Aggregate produce, compare buyer offers, track outcomes for member farmers.', u: 'fpo@krishisetu.dev / fpo123' },
+            { t: 'Quality Assessor', d: 'Attest lot grade and confidence — every attestation is signed to the audit trail.', u: 'quality@krishisetu.dev / quality123' },
+            { t: 'Logistics', d: 'See shipments assigned to you, progress pickup → in transit → delivered.', u: 'logistics@krishisetu.dev / logistics123' },
             { t: 'Admin', d: 'Verify, monitor, investigate disputes, review the full audit trail.', u: 'admin@krishisetu.dev / admin123' },
-          ].map((r, i) => (
-            <div key={i} className="role-card" data-testid={`role-card-${r.t.toLowerCase()}`}>
+          ].map((r) => (
+            <div key={r.t} className="role-card" data-testid={`role-card-${r.t.toLowerCase().replace(/\s+/g, '-')}`}>
               <h3>{r.t}</h3>
               <p>{r.d}</p>
               <code>{r.u}</code>
@@ -139,10 +142,7 @@ export default function Landing() {
       </section>
 
       <footer className="landing-footer">
-        <div className="brand">
-          <div className="brand-mark"><Leaf size={16} /></div>
-          <div><strong>KrishiSetu</strong><span>SIH 2026 · Prototype</span></div>
-        </div>
+        <Logo size={16} />
         <span>Demo data is clearly labelled. Payments and blockchain are mock providers unless credentials are configured.</span>
       </footer>
     </div>
