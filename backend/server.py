@@ -74,10 +74,11 @@ def calculate_options(payload: AnalyzeRequest):
         net = revenue - market["transport"] - commission - packaging - loss
         options.append({**market, "revenue": revenue, "commission": commission, "packaging": packaging, "loss": loss, "net": net, "confidence": 88 - len(options)*5})
     store_revenue = 2920 * qty
-    store_costs = round(qty * 160) + round(store_revenue * .035) + 1850 + round(store_revenue * .012)
+    store_packaging = round(qty * 85)
+    store_costs = round(qty * 160) + store_packaging + round(store_revenue * .035) + 1850 + round(store_revenue * .012)
     store_net = store_revenue - store_costs
     sell_now = max(options, key=lambda x: x["net"])
-    store = {"id":"store","market":"Store 30 days → Vashi","price":2920,"revenue":store_revenue,"transport":1850,"storage":round(qty*160),"commission":round(store_revenue*.012),"packaging":round(qty*85),"loss":round(store_revenue*.035),"net":store_net,"confidence":72,"buyer":"Harbor Foods Co.","demand":"Rising","timing":"Sell after 30 days"}
+    store = {"id":"store","market":"Store 30 days → Vashi","price":2920,"revenue":store_revenue,"transport":1850,"storage":round(qty*160),"commission":round(store_revenue*.012),"packaging":store_packaging,"loss":round(store_revenue*.035),"net":store_net,"confidence":72,"buyer":"Harbor Foods Co.","demand":"Rising","timing":"Sell after 30 days"}
     ranked = sorted(options, key=lambda x: x["net"], reverse=True)
     return {"input": payload.model_dump(), "options": ranked, "store": store, "recommended": ranked[0], "sell_now_net": sell_now["net"], "store_net": store_net, "generated_at": datetime.now(timezone.utc).isoformat()}
 
